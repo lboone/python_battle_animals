@@ -1,7 +1,7 @@
 from settings import *
 from pytmx.util_pygame import load_pygame
 from os.path import dirname, abspath,join
-from sprites import Sprite, AnimatedSprite, MonsterPatchSprite
+from sprites import Sprite, AnimatedSprite, MonsterPatchSprite, BorderSprite, CollidableSprite
 from entities import Player, Character
 from groups import AllSprites
 from support import *
@@ -15,6 +15,7 @@ class Game:
 
         # groups
         self.all_sprites = AllSprites()
+        self.collision_sprites = pygame.sprite.Group()
 
         self.import_assets()
         self.setup(self.tmx_maps['world'], 'house')
@@ -54,7 +55,15 @@ class Game:
             if obj.name == "top":
                 Sprite((obj.x, obj.y), obj.image, self.all_sprites, WORLD_LAYERS['top'])
             else:
-                Sprite((obj.x, obj.y), obj.image, self.all_sprites)
+                CollidableSprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
+
+        # collision objects
+        for obj in tmx_map.get_layer_by_name("Collisions"):
+            BorderSprite(
+                pos=(obj.x, obj.y),
+                surf=pygame.Surface((obj.width, obj.height)),
+                groups=self.collision_sprites
+            )
 
         # grass patches
         for obj in tmx_map.get_layer_by_name("Monsters"):
@@ -73,11 +82,12 @@ class Game:
                         pos = (obj.x, obj.y), 
                         frames = self.overworld_frames['characters']['player'], 
                         groups = self.all_sprites,
-                        facing_direction=obj.properties['direction'])
+                        facing_direction=obj.properties['direction'],
+                        collision_sprites=self.collision_sprites)
             else:
                 Character( pos = (obj.x, obj.y), 
                         frames = self.overworld_frames['characters'][obj.properties['graphic']], 
-                        groups = self.all_sprites,
+                        groups = (self.all_sprites, self.collision_sprites), 
                         facing_direction=obj.properties['direction'])
 
         
